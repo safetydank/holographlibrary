@@ -23,13 +23,14 @@
 
 package com.echo.holographlibrary;
 
+import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.Region;
 
 public class Bar {
-	private int mColor;
-	private String mName = null;
-	private float mValue;
+	private int mColor = 0;
+	private String mName = "";
+	private double mValue = 0;
 	private String mValueString = null;
 	private Path mPath = null;
 	private Region mRegion = null;
@@ -37,20 +38,27 @@ public class Bar {
 	public int getColor() {
 		return mColor;
 	}
-	public void setColor(int color) {
-		this.mColor = color;
+	public Bar setColor(int color) {
+		mColor = color;
+        return this;
 	}
+    public Bar setColor(String color) {
+        mColor = Color.parseColor(color);
+        return this;
+    }
 	public String getName() {
 		return mName;
 	}
-	public void setName(String name) {
+	public Bar setName(String name) {
 		this.mName = name;
+        return this;
 	}
-	public float getValue() {
+	public double getValue() {
 		return mValue;
 	}
-	public void setValue(float value) {
+	public Bar setValue(double value) {
 		this.mValue = value;
+        return this;
 	}
 	
 	public String getValueString()
@@ -62,22 +70,25 @@ public class Bar {
 		}
 	}
 	
-	public void setValueString(final String valueString)
+	public Bar setValueString(final String valueString)
 	{
 		mValueString = valueString;
+        return this;
 	}
 	
 	public Path getPath() {
 		return mPath;
 	}
-	public void setPath(Path path) {
+	public Bar setPath(Path path) {
 		this.mPath = path;
+        return this;
 	}
 	public Region getRegion() {
 		return mRegion;
 	}
-	public void setRegion(Region region) {
+	public Bar setRegion(Region region) {
 		this.mRegion = region;
+        return this;
 	}
 	
 }
