@@ -47,9 +47,9 @@ public class BarGraph extends View {
 
     private ArrayList<Bar> mBars = new ArrayList<Bar>();
     private Paint mPaint = new Paint();
-    private Rect mRect = null;
     private boolean mShowBarText = false;
     private boolean mShowBarTextMax = false;
+    private boolean mShowGraphLines = false;
     private int mIndexSelected = -1;
     private OnBarClickedListener mListener;
     private Bitmap mFullImage;
@@ -58,17 +58,25 @@ public class BarGraph extends View {
     private float mBottomPadding = 30.0f;
     private double mMaxValue = 0;
     private int mValueFontSize = 10;
+    private int mGraphLineColor;
 
     private Context mContext = null;
 
     public BarGraph(Context context) {
         super(context);
         mContext = context;
+        init();
     }
 
     public BarGraph(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext = context;
+        init();
+    }
+
+    void init() {
+        //  Defaults
+        mGraphLineColor = Color.parseColor("#dddddd");
     }
 
     public BarGraph setShowBarText(boolean show){
@@ -103,15 +111,25 @@ public class BarGraph extends View {
         return this;
     }
 
+    public BarGraph setShowGraphLines(boolean show) {
+        mShowGraphLines = show;
+        return this;
+    }
+
+    public BarGraph setGraphLineColor(int color) {
+        mGraphLineColor = color;
+        return this;
+    }
+
     public ArrayList<Bar> getBars(){
         return mBars;
     }
 
-    void drawGraph(boolean drawAxis, boolean drawBars) {
+    void drawGraph() {
         mFullImage = Bitmap.createBitmap(getWidth(), getHeight(), Config.ARGB_8888);
         Canvas canvas = new Canvas(mFullImage);
         canvas.drawColor(Color.TRANSPARENT);
-        NinePatchDrawable popup = (NinePatchDrawable)this.getResources().getDrawable(R.drawable.popup_black);
+        NinePatchDrawable popup = (NinePatchDrawable) getResources().getDrawable(R.drawable.popup_black);
 
         float density       = mContext.getResources().getDisplayMetrics().density;
         float scaledDensity = mContext.getResources().getDisplayMetrics().scaledDensity;
@@ -120,86 +138,103 @@ public class BarGraph extends View {
         float bottomPadding = mBottomPadding * density;
         double maxValue     = mMaxValue <= 0 ? 1 : mMaxValue;
 
-        // Draw x-axis line
-        if (drawAxis) {
-            mPaint.setColor(Color.BLACK);
-            mPaint.setStrokeWidth(2 * density);
-            mPaint.setAlpha(50);
-            mPaint.setAntiAlias(true);
-            canvas.drawLine(0, getHeight()-bottomPadding + 10*density, getWidth(), getHeight()-bottomPadding+10*density, mPaint);
-        }
+        mPaint.setAntiAlias(true);
 
-        float barWidth = (getWidth() - (padding*2)*mBars.size())/mBars.size();
+        float barWidth = (getWidth() / mBars.size()) - (padding * 2);
+        float base = getHeight() - bottomPadding;
 
-
-        float usableHeight;
+        float usableHeight = getHeight() - bottomPadding;
         if (mShowBarText || mShowBarTextMax) {
             mPaint.setTextSize(mValueFontSize * scaledDensity);
             Rect r3 = new Rect();
             mPaint.getTextBounds("$", 0, 1, r3);
-            usableHeight = getHeight()-bottomPadding-Math.abs(r3.top-r3.bottom)-24 * density;
-        } else {
-            usableHeight = getHeight()-bottomPadding;
+            usableHeight -= Math.abs(r3.top-r3.bottom)-24 * density;
         }
 
-        mRect = new Rect();
+        boolean drawGraphLines = true;
+        if (drawGraphLines) {
+            mPaint.setColor(mGraphLineColor);
+            mPaint.setStrokeWidth(1.0f * density);
 
-        if (drawBars) {
-            int count = 0;
-
-            boolean maxShown = false;
-            for (final Bar bar : mBars) {
-                // Set bar bounds
-                int left   = (int)((padding*2)*count + padding + barWidth*count);
-                int top    = (int)(getHeight()-bottomPadding-(usableHeight*(bar.getValue() / maxValue)));
-                int right  = (int)((padding*2)*count + padding + barWidth*(count+1));
-                int bottom = (int)(getHeight()-bottomPadding);
-                mRect.set(left, top, right, bottom);
-
-                // Draw bar
-                mPaint.setColor(bar.getColor());
-                mPaint.setAlpha(255);
-                canvas.drawRect(mRect, mPaint);
-
-                // Create selection region
-                Path path = new Path();
-                path.addRect(new RectF(mRect.left-selectPadding, mRect.top-selectPadding, mRect.right+selectPadding, mRect.bottom+selectPadding), Path.Direction.CW);
-                bar.setPath(path);
-                bar.setRegion(new Region(mRect.left-selectPadding, mRect.top-selectPadding, mRect.right+selectPadding, mRect.bottom+selectPadding));
-
-                // Draw x-axis label text
-                mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * mContext.getResources().getDisplayMetrics().scaledDensity);
-                int x = (int)(((mRect.left+mRect.right)/2)-(mPaint.measureText(bar.getName())/2));
-                int y = (int) (getHeight()-3 * mContext.getResources().getDisplayMetrics().scaledDensity);
-                canvas.drawText(bar.getName(), x, y, mPaint);
-
-                boolean showThisMax = (!maxShown && bar.getValue() == maxValue);
-                maxShown |= showThisMax;
-
-                // Draw value text
-                if (mShowBarText || (mShowBarTextMax && showThisMax)) {
-                    mPaint.setTextSize(mValueFontSize * mContext.getResources().getDisplayMetrics().scaledDensity);
-                    mPaint.setColor(Color.WHITE);
-                    Rect r2 = new Rect();
-                    String text = bar.getValueString();
-                    mPaint.getTextBounds(text, 0, 1, r2);
-
-                    int boundLeft = (int) (((mRect.left+mRect.right)/2)-(mPaint.measureText(bar.getValueString())/2)-10 * density);
-                    int boundTop = (int) (mRect.top+(r2.top-r2.bottom)-18 * density);
-                    int boundRight = (int)(((mRect.left+mRect.right)/2)+(mPaint.measureText(bar.getValueString())/2)+10 * density);
-                    popup.setBounds(boundLeft, boundTop, boundRight, mRect.top);
-                    popup.draw(canvas);
-
-                    canvas.drawText(text, (int)(((mRect.left+mRect.right)/2)-(mPaint.measureText(text))/2), mRect.top-(mRect.top - boundTop)/2f+(float)Math.abs(r2.top-r2.bottom)/2f*0.7f, mPaint);
-                }
-                if (mIndexSelected == count && mListener != null) {
-                    mPaint.setColor(Color.parseColor("#33B5E5"));
-                    mPaint.setAlpha(100);
-                    canvas.drawPath(bar.getPath(), mPaint);
-                    mPaint.setAlpha(255);
-                }
-                count++;
+            //  Vertical lines
+            for (int i=0; i < mBars.size() + 1; ++i) {
+                float x = i * (barWidth + 2*padding);
+                canvas.drawLine(x, base, x, base - (int) usableHeight, mPaint);
             }
+
+            //  Horizontal lines
+            float lineHeight = 30.0f * density;
+            int hcount = (int) (usableHeight / lineHeight);
+            for (int i=0; i < hcount + 1; ++i) {
+                float y = base - i * lineHeight;
+                canvas.drawLine(0f, y, (float) getWidth(), y, mPaint);
+            }
+        }
+
+        Rect rect = new Rect();
+
+        int count = 0;
+
+        boolean maxShown = false;
+        for (final Bar bar : mBars) {
+            // Set bar bounds
+            int left   = (int) ((barWidth + padding*2) * count + padding);
+            int right  = (int) (left + barWidth);
+            int bottom = (int) (getHeight() - bottomPadding);
+            int top    = (int) (bottom - (usableHeight*(bar.getValue() / maxValue)));
+            rect.set(left, top, right, bottom);
+
+            // Draw bar
+            mPaint.setColor(bar.getColor());
+            mPaint.setAlpha(255);
+            canvas.drawRect(rect, mPaint);
+
+            // Create selection region
+            Path path = new Path();
+            path.addRect(new RectF(rect.left - selectPadding, rect.top-selectPadding,
+                        rect.right + selectPadding, rect.bottom + selectPadding), Path.Direction.CW);
+            bar.setPath(path);
+            bar.setRegion(new Region(rect.left-selectPadding, rect.top-selectPadding,
+                        rect.right+selectPadding, rect.bottom+selectPadding));
+
+            // Draw x-axis label text
+            mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * scaledDensity);
+            int x = (int) (((rect.left+rect.right)/2)-(mPaint.measureText(bar.getName())/2));
+            int y = (int) (getHeight()-3 * scaledDensity);
+            canvas.drawText(bar.getName(), x, y, mPaint);
+
+            boolean showThisMax = (!maxShown && bar.getValue() == maxValue);
+            maxShown |= showThisMax;
+
+            // Draw value text
+            if (mShowBarText || (mShowBarTextMax && showThisMax)) {
+                mPaint.setTextSize(mValueFontSize * scaledDensity);
+                mPaint.setColor(Color.WHITE);
+                Rect r2 = new Rect();
+                String text = bar.getValueString();
+                mPaint.getTextBounds(text, 0, 1, r2);
+
+                float centerX = (rect.left + rect.right) * 0.5f;
+                int boundLeft  = (int) (centerX-(mPaint.measureText(bar.getValueString())/2)-10 * density);
+                int boundTop   = (int) (rect.top+(r2.top-r2.bottom)-18 * density);
+                int boundRight = (int) (centerX+(mPaint.measureText(bar.getValueString())/2)+10 * density);
+                popup.setBounds(boundLeft, boundTop, boundRight, rect.top);
+                popup.draw(canvas);
+
+                canvas.drawText(text,
+                        (int)(centerX-(mPaint.measureText(text))/2),
+                        rect.top-(rect.top - boundTop)/2f+(float)Math.abs(r2.top-r2.bottom)/2f*0.7f,
+                        mPaint);
+            }
+
+            //  Highlight selected
+            if (mIndexSelected == count && mListener != null) {
+                mPaint.setColor(Color.parseColor("#33B5E5"));
+                mPaint.setAlpha(100);
+                canvas.drawPath(bar.getPath(), mPaint);
+                mPaint.setAlpha(255);
+            }
+            count++;
         }
     }
 
@@ -220,7 +255,7 @@ public class BarGraph extends View {
                 drawBars = false;
             }
 
-            drawGraph(true, true);
+            drawGraph();
 
             mShouldUpdate = false;
         }
