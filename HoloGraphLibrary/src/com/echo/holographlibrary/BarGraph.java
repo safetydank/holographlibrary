@@ -59,6 +59,8 @@ public class BarGraph extends View {
     private double mMaxValue = 0;
     private int mValueFontSize = 10;
     private int mGraphLineColor;
+    private int mXLabelColor;
+    private int mYLabelColor;
 
     private Context mContext = null;
 
@@ -121,8 +123,105 @@ public class BarGraph extends View {
         return this;
     }
 
+    public BarGraph setXLabelColor(int color) {
+        mXLabelColor = color;
+        return this;
+    }
+
+    public BarGraph setYLabelColor(int color) {
+        mYLabelColor = color;
+        return this;
+    }
+
     public ArrayList<Bar> getBars(){
         return mBars;
+    }
+
+    /**
+     * +--+---+
+     * |1 |2  |   1 - yLabelRect
+     * |  |   |   2 - graphRect
+     * |  |   |   3 - xLabelRect
+     * |  +---+
+     * |  |3  |
+     * +--+---+
+     */
+    void drawGraph2(Bitmap bitmap) {
+        Canvas canvas = new Canvas(bitmap);
+
+        final float density = mContext.getResources().getDisplayMetrics().density;
+        final float scaledDensity = mContext.getResources().getDisplayMetrics().scaledDensity;
+
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+
+        //  Space between bars
+        float padding = mPadding * density;
+
+        int kYLabelWidth  = 40;
+        // int kXLabelHeight = 30;
+
+        //  Calculate x-axis label text height
+        mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * scaledDensity);
+        Rect rect = new Rect();
+        mPaint.getTextBounds("$", 0, 1, rect);
+        float kXLabelHeight = rect.height() + 2.0f * padding;
+
+        RectF yLabelRect = new RectF(0, 0, kYLabelWidth, height-1);
+        RectF xLabelRect = new RectF(kYLabelWidth, height - kXLabelHeight, width-1, height-1);
+        RectF graphRect  = new RectF(kYLabelWidth, 0, width-1, height - kXLabelHeight);
+
+        mPaint.setAntiAlias(true);
+        mPaint.setStyle(Paint.Style.STROKE);
+//        canvas.drawRect(yLabelRect, mPaint);
+//        canvas.drawRect(xLabelRect, mPaint);
+//        canvas.drawRect(graphRect, mPaint);
+
+        double maxValue = mMaxValue <= 0 ? 1 : mMaxValue;
+        float barWidth = (graphRect.width() / mBars.size()) - (padding * 2);
+
+        float x;
+
+        if (mShowGraphLines) {
+            mPaint.setColor(mGraphLineColor);
+            mPaint.setStrokeWidth(1.0f * density);
+            mPaint.setStyle(Paint.Style.STROKE);
+
+            //  Vertical lines
+            for (int i=0; i < mBars.size() + 1; ++i) {
+                x = i * (barWidth + 2*padding) + graphRect.left;
+                canvas.drawLine(x, xLabelRect.bottom, x, graphRect.top, mPaint);
+            }
+
+            //  Horizontal lines
+            float lineHeight = 30.0f * density;
+            int hcount = (int) (graphRect.height() / lineHeight);
+            for (int i=0; i < hcount + 1; ++i) {
+                float y = graphRect.bottom - i * lineHeight;
+                canvas.drawLine(graphRect.left - 2 * padding, y, graphRect.right, y, mPaint);
+            }
+        }
+
+        //  Draw bars
+        x = padding;
+        for (final Bar bar : mBars) {
+            RectF barRect = new RectF(x, (float) -(graphRect.height() * (bar.getValue() / maxValue)), x+barWidth, 0);
+            barRect.offset(graphRect.left, graphRect.bottom);
+            x += barWidth + padding * 2;
+
+            // Draw bar
+            mPaint.setColor(bar.getColor());
+            mPaint.setAlpha(255);
+            mPaint.setStyle(Paint.Style.FILL);
+            canvas.drawRect(barRect, mPaint);
+
+            // Draw x-axis label text
+            mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * scaledDensity);
+            float tx = (int) barRect.centerX() - mPaint.measureText(bar.getName()) / 2;
+            float ty = (int) xLabelRect.bottom - padding;
+            mPaint.setColor(mXLabelColor);
+            canvas.drawText(bar.getName(), tx, ty, mPaint);
+        }
     }
 
     void drawGraph() {
@@ -151,8 +250,7 @@ public class BarGraph extends View {
             usableHeight -= Math.abs(r3.top-r3.bottom)-24 * density;
         }
 
-        boolean drawGraphLines = true;
-        if (drawGraphLines) {
+        if (mShowGraphLines) {
             mPaint.setColor(mGraphLineColor);
             mPaint.setStrokeWidth(1.0f * density);
 
@@ -255,7 +353,9 @@ public class BarGraph extends View {
                 drawBars = false;
             }
 
-            drawGraph();
+            // drawGraph();
+            mFullImage = Bitmap.createBitmap(getWidth(), getHeight(), Config.ARGB_8888);
+            drawGraph2(mFullImage);
 
             mShouldUpdate = false;
         }
@@ -265,7 +365,6 @@ public class BarGraph extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
         Point point = new Point();
         point.x = (int) event.getX();
         point.y = (int) event.getY();
@@ -299,7 +398,7 @@ public class BarGraph extends View {
     @Override
     protected void onDetachedFromWindow()
     {
-    	if(mFullImage != null)
+    	if (mFullImage != null)
     		mFullImage.recycle();
 
     	super.onDetachedFromWindow();
