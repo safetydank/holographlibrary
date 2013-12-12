@@ -156,16 +156,16 @@ public class BarGraph extends View {
         int height = bitmap.getHeight();
 
         //  Space between bars
-        float padding = mPadding * density;
+        final float kPadding = mPadding * density;
+        final float kLeftOverhang = 10.0f * density;
 
-        int kYLabelWidth  = 40;
-        // int kXLabelHeight = 30;
+        int kYLabelWidth = 40 + ((int) kLeftOverhang);
 
         //  Calculate x-axis label text height
         mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * scaledDensity);
         Rect rect = new Rect();
         mPaint.getTextBounds("$", 0, 1, rect);
-        float kXLabelHeight = rect.height() + 2.0f * padding;
+        final float kXLabelHeight = rect.height() + 2.0f * kPadding;
 
         RectF yLabelRect = new RectF(0, 0, kYLabelWidth, height-1);
         RectF xLabelRect = new RectF(kYLabelWidth, height - kXLabelHeight, width-1, height-1);
@@ -178,7 +178,7 @@ public class BarGraph extends View {
 //        canvas.drawRect(graphRect, mPaint);
 
         double maxValue = mMaxValue <= 0 ? 1 : mMaxValue;
-        float barWidth = (graphRect.width() / mBars.size()) - (padding * 2);
+        float barWidth = (graphRect.width() / mBars.size()) - (kPadding * 2);
 
         float x;
 
@@ -189,7 +189,7 @@ public class BarGraph extends View {
 
             //  Vertical lines
             for (int i=0; i < mBars.size() + 1; ++i) {
-                x = i * (barWidth + 2*padding) + graphRect.left;
+                x = i * (barWidth + 2 * kPadding) + graphRect.left;
                 canvas.drawLine(x, xLabelRect.bottom, x, graphRect.top, mPaint);
             }
 
@@ -198,16 +198,16 @@ public class BarGraph extends View {
             int hcount = (int) (graphRect.height() / lineHeight);
             for (int i=0; i < hcount + 1; ++i) {
                 float y = graphRect.bottom - i * lineHeight;
-                canvas.drawLine(graphRect.left - 2 * padding, y, graphRect.right, y, mPaint);
+                canvas.drawLine(graphRect.left - kLeftOverhang, y, graphRect.right, y, mPaint);
             }
         }
 
         //  Draw bars
-        x = padding;
+        x = kPadding;
         for (final Bar bar : mBars) {
             RectF barRect = new RectF(x, (float) -(graphRect.height() * (bar.getValue() / maxValue)), x+barWidth, 0);
             barRect.offset(graphRect.left, graphRect.bottom);
-            x += barWidth + padding * 2;
+            x += barWidth + kPadding * 2;
 
             // Draw bar
             mPaint.setColor(bar.getColor());
@@ -218,7 +218,7 @@ public class BarGraph extends View {
             // Draw x-axis label text
             mPaint.setTextSize(AXIS_LABEL_FONT_SIZE * scaledDensity);
             float tx = (int) barRect.centerX() - mPaint.measureText(bar.getName()) / 2;
-            float ty = (int) xLabelRect.bottom - padding;
+            float ty = (int) xLabelRect.bottom - kPadding;
             mPaint.setColor(mXLabelColor);
             canvas.drawText(bar.getName(), tx, ty, mPaint);
         }
