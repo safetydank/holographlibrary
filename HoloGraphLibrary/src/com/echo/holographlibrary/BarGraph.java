@@ -181,9 +181,9 @@ public class BarGraph extends View {
         final float kXLabelHeight = rect.height() + 2.0f * kPadding;
 
         //  Create labels with 0-width yLabelRect
-        RectF yLabelRect = new RectF(0, 0, 0, height-1);
+        RectF yLabelRect = new RectF(0, kPadding * 2.0f, 0, height-1);
         RectF xLabelRect = new RectF(0, height - kXLabelHeight, width-1, height-1);
-        RectF graphRect  = new RectF(0, 0, width-1, height - kXLabelHeight);
+        RectF graphRect  = new RectF(0, kPadding * 2.0f, width-1, height - kXLabelHeight);
 
         //  Horizontal graph lines
         boolean validValues = (mMaxValue > 0);
