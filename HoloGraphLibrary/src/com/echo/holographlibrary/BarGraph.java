@@ -48,7 +48,7 @@ public class BarGraph extends View {
         public void mapLabels(double[] values, String[] labels);
     }
 
-    private final static int X_AXIS_LABEL_FONT_SIZE = 15;
+    private final static int X_AXIS_LABEL_FONT_SIZE = 12;
     private final static int Y_AXIS_LABEL_FONT_SIZE = 12;
 
     private ArrayList<Bar> mBars = new ArrayList<Bar>();
@@ -431,6 +431,12 @@ public class BarGraph extends View {
         }
 
         ca.drawBitmap(mFullImage, 0, 0, null);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mShouldUpdate = true;
     }
 
     // @Override
